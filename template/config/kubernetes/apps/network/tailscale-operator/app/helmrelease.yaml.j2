@@ -13,6 +13,8 @@ spec:
         name: tailscale
       version: 1.98.4
   values:
+    operatorConfig:
+      defaultTags: tag:k8s-operator
     oauth:
       clientId: ${SECRET_TAILSCALE_OAUTH_CLIENT_ID}
       clientSecret: ${SECRET_TAILSCALE_OAUTH_CLIENT_SECRET}
