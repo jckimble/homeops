@@ -5,6 +5,7 @@ import ipaddress
 import json
 import makejinja
 import re
+import shutil
 import subprocess
 
 
@@ -70,16 +71,46 @@ CONFIG_FILE = 'cluster.toml'
 SCHEMA_FILE = 'template/resources/config.schema.cue'
 
 
+def _cue_export_candidates() -> list[list[str]]:
+    candidates: list[list[str]] = []
+
+    # Prefer the binary path resolved by mise so Python venv shims cannot shadow it.
+    if shutil.which('mise'):
+        resolved = subprocess.run(
+            ['mise', 'which', 'cue'],
+            capture_output=True,
+            text=True,
+        )
+        cue_path = resolved.stdout.strip()
+        if resolved.returncode == 0 and cue_path:
+            candidates.append([cue_path, 'export', CONFIG_FILE, SCHEMA_FILE, '--out', 'json'])
+        candidates.append(['mise', 'exec', '--', 'cue', 'export', CONFIG_FILE, SCHEMA_FILE, '--out', 'json'])
+
+    candidates.append(['cue', 'export', CONFIG_FILE, SCHEMA_FILE, '--out', 'json'])
+    return candidates
+
+
 # Run `cue export` to validate and apply schema defaults to the user's config.
 def cue_export() -> dict[str, Any]:
-    try:
-        result = subprocess.run(
-            ['cue', 'export', CONFIG_FILE, SCHEMA_FILE, '--out', 'json'],
-            capture_output=True, check=True, text=True,
-        )
-    except subprocess.CalledProcessError as e:
-        raise RuntimeError(f"cue export failed:\n{e.stderr}") from None
-    return json.loads(result.stdout)
+    failures: list[str] = []
+    for command in _cue_export_candidates():
+        result = subprocess.run(command, capture_output=True, text=True)
+        if result.returncode != 0:
+            failures.append(f"{' '.join(command)}\n{result.stderr.strip()}")
+            continue
+
+        stdout = result.stdout.strip()
+        if not stdout:
+            failures.append(f"{' '.join(command)}\nno JSON output on stdout\n{result.stderr.strip()}")
+            continue
+
+        try:
+            return json.loads(stdout)
+        except json.JSONDecodeError as e:
+            failures.append(f"{' '.join(command)}\ninvalid JSON output: {e}\n{result.stdout[:300]}")
+
+    details = '\n\n'.join(failures) if failures else 'no commands attempted'
+    raise RuntimeError(f"cue export failed:\n{details}")
 
 
 class Plugin(makejinja.plugin.Plugin):

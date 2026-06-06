@@ -18,7 +18,7 @@ permissions: {}
 
 jobs:
   validate-invalid:
-    if: ${{ github.repository == 'onedr0p/cluster-template' }}
+    if: ${{ github.repository == 'jckimble/homeops' }}
     name: reject-invalid (${{ matrix.fixture }})
     runs-on: ubuntu-latest
     permissions:
@@ -55,7 +55,7 @@ jobs:
           cue export "$fixture" "$schema" --out yaml || true
 
   validate-valid:
-    if: ${{ github.repository == 'onedr0p/cluster-template' }}
+    if: ${{ github.repository == 'jckimble/homeops' }}
     name: accept-valid (${{ matrix.fixture }})
     runs-on: ubuntu-latest
     permissions:
