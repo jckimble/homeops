@@ -7,6 +7,9 @@ metadata:
     tailscale.com/hostname: echo
 spec:
   ingressClassName: tailscale
+  tls:
+    - hosts:
+        - echo
   defaultBackend:
     service:
       name: echo
