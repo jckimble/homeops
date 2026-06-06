@@ -12,13 +12,13 @@
 node_cidr = ""
 
 # Upstream DNS servers Talos nodes use for name resolution. Defaults to
-# Cloudflare (1.1.1.1 / 1.0.0.1). Override if you run an internal resolver
+# common public resolvers (1.1.1.1 / 1.0.0.1). Override if you run an internal resolver
 # (Pi-hole, Unbound, AdGuard) or want a different public provider.
 # OPTIONAL. Default: ["1.1.1.1", "1.0.0.1"]
 
 # dns_servers = ["1.1.1.1", "1.0.0.1"]
 
-# Upstream NTP servers. Defaults to Cloudflare's anycast NTP. Most homelabs
+# Upstream NTP servers. Defaults to public anycast NTP servers. Most homelabs
 # don't need to change this.
 # OPTIONAL. Default: ["162.159.200.1", "162.159.200.123"]
 
@@ -79,31 +79,6 @@ addr = ""
 
 
 # =============================================================================
-#    LoadBalancer IPs that Cilium hands out to the cluster's edge gateways.
-#    Each must be an unused address inside network.node_cidr, and all four
-#    (these three plus kubernetes.api.addr) must be distinct.
-# =============================================================================
-[gateways]
-
-# IP for the `envoy-internal` gateway — used by HTTPRoutes intended for
-# private/in-network access only. Most apps use this gateway by default.
-# REQUIRED.
-internal = ""
-
-# IP for `k8s_gateway`, which serves DNS for cluster-managed hostnames.
-# Point your home DNS server's conditional forwarder for cloudflare.domain
-# at this IP to enable split-DNS resolution from your LAN.
-# REQUIRED.
-dns = ""
-
-# IP for the `envoy-external` gateway — sits behind the cloudflared tunnel
-# and handles traffic exposed to the public internet. HTTPRoutes that
-# reference this gateway become reachable via your cloudflare domain.
-# REQUIRED.
-external = ""
-
-
-# =============================================================================
 #    The GitHub repo Flux will sync from. This is the single source of truth
 #    for everything in your cluster — once bootstrapped, changes are made by
 #    pushing to this repo.
@@ -130,22 +105,18 @@ name = ""
 
 
 # =============================================================================
-#    DNS authority and tunnel provider for any apps you want to expose to
-#    the public internet. external-dns publishes records here automatically;
-#    cert-manager uses the same token for ACME DNS-01 challenges.
+#    Tailscale Operator credentials. Create an OAuth client in your tailnet
+#    admin console and assign a tag the operator is allowed to own.
 # =============================================================================
-[cloudflare]
+[tailscale]
 
-# The Cloudflare-managed domain hosting your cluster's public hostnames.
-# Used by external-dns, cert-manager, and the cloudflared tunnel.
-# REQUIRED. Example: "example.com"
-domain = ""
-
-# API token (NOT the global API key) with `Zone - DNS - Edit` and
-# `Account - Cloudflare Tunnel - Read` permissions, scoped to the zone
-# above. See the README for token creation steps.
+# OAuth client ID for the Tailscale Kubernetes operator.
 # REQUIRED.
-token = ""
+oauth_client_id = ""
+
+# OAuth client secret for the Tailscale Kubernetes operator.
+# REQUIRED.
+oauth_client_secret = ""
 
 
 # =============================================================================

@@ -1,6 +1,6 @@
-# ⛵ Cluster Template
+# ⛵ HomeOps
 
-Welcome to my template designed for deploying a single Kubernetes cluster. Whether you're setting up a cluster at home on bare-metal or virtual machines (VMs), this project aims to simplify the process and make Kubernetes more accessible. This template is inspired by my personal [home-ops](https://github.com/onedr0p/home-ops) repository, providing a practical starting point for anyone interested in managing their own Kubernetes environment.
+This repository contains my Kubernetes homelab configuration, adapted from [onedr0p/cluster-template](https://github.com/onedr0p/cluster-template) and customized for my HomeOps environment. Whether you're running on bare-metal or virtual machines (VMs), the goal is to keep cluster operations reproducible and easy to iterate on.
 
 At its core, this project leverages [makejinja](https://github.com/mirkolenz/makejinja), a powerful tool for rendering templates. By reading the [cluster.toml](./cluster.sample.toml) configuration file—validated and defaulted by [CUE](https://cuelang.org/)—Makejinja generates the necessary configurations to deploy a Kubernetes cluster with the following features:
 
@@ -12,10 +12,10 @@ With this approach, you'll gain a solid foundation to build and manage your Kube
 
 ## ✨ Features
 
-A Kubernetes cluster deployed with [Talos Linux](https://github.com/siderolabs/talos) and an opinionated implementation of [Flux](https://github.com/fluxcd/flux2) using [GitHub](https://github.com/) as the Git provider, [sops](https://github.com/getsops/sops) to manage secrets and [cloudflared](https://github.com/cloudflare/cloudflared) to access applications external to your local network.
+A Kubernetes cluster deployed with [Talos Linux](https://github.com/siderolabs/talos) and an opinionated implementation of [Flux](https://github.com/fluxcd/flux2) using [GitHub](https://github.com/) as the Git provider, [sops](https://github.com/getsops/sops) to manage secrets and the [Tailscale Kubernetes Operator](https://tailscale.com/kb/1236/kubernetes-operator) for secure remote access.
 
-- **Required:** Some knowledge of [Containers](https://opencontainers.org/), [YAML](https://noyaml.com/), [Git](https://git-scm.com/), and a **Cloudflare account** with a **domain**.
-- **Included components:** [flux](https://github.com/fluxcd/flux2), [cilium](https://github.com/cilium/cilium), [cert-manager](https://github.com/cert-manager/cert-manager), [spegel](https://github.com/spegel-org/spegel), [reloader](https://github.com/stakater/Reloader), [envoy-gateway](https://github.com/envoyproxy/gateway), [external-dns](https://github.com/kubernetes-sigs/external-dns) and [cloudflared](https://github.com/cloudflare/cloudflared).
+- **Required:** Some knowledge of [Containers](https://opencontainers.org/), [YAML](https://noyaml.com/), [Git](https://git-scm.com/), and access to a **Tailscale tailnet** where you can create OAuth clients.
+- **Included components:** [flux](https://github.com/fluxcd/flux2), [cilium](https://github.com/cilium/cilium), [cert-manager](https://github.com/cert-manager/cert-manager), [spegel](https://github.com/spegel-org/spegel), [reloader](https://github.com/stakater/Reloader), and the [Tailscale Kubernetes Operator](https://tailscale.com/kb/1236/kubernetes-operator).
 
 **Other features include:**
 
@@ -67,12 +67,11 @@ These guidelines provide a strong baseline, but there are always exceptions and 
 > [!TIP]
 > It is recommended to set the visibility of your repository to `Public` so you can easily request help if you get stuck.
 
-1. Create a new repository by clicking the green `Use this template` button at the top of this page, then clone the new repo you just created and `cd` into it. Alternatively you can use the [GitHub CLI](https://cli.github.com/) ...
+1. Clone this repository locally and change into the directory. For example:
 
     ```sh
-    export REPONAME="home-ops"
-    gh repo create $REPONAME --template onedr0p/cluster-template --public --clone
-    cd $REPONAME
+    gh repo clone jckimble/homeops
+    cd homeops
     ```
 
 2. **Install** the [Mise CLI](https://mise.jdx.dev/getting-started.html#installing-mise-cli) on your local workstation.
@@ -98,25 +97,15 @@ These guidelines provide a strong baseline, but there are always exceptions and 
     helm registry logout ghcr.io
     ```
 
-### Stage 4: Cloudflare configuration
+### Stage 4: Tailscale configuration
 
 > [!WARNING]
 > If any of the commands fail with `command not found` or `unknown command` it means `mise` is either not installed, activated or it could be configured incorrectly.
 
-1. Create a Cloudflare API token for use with cloudflared and external-dns by reviewing the official [documentation](https://developers.cloudflare.com/fundamentals/api/get-started/create-token/) and following the instructions below.
+1. Create a Tailscale OAuth client for the Kubernetes operator by following the [Tailscale install guide](https://tailscale.com/docs/kubernetes-operator/install-operator), then save the `client_id` and `client_secret` values for `cluster.toml`.
 
-   - Click the blue `Use template` button for the `Edit zone DNS` template.
-   - Name your token `kubernetes`
-   - Under `Permissions`, click `+ Add More` and add permissions `Zone - DNS - Edit` and `Account - Cloudflare Tunnel - Read`
-   - Limit the permissions to a specific account and/or zone resources and then click `Continue to Summary` and then `Create Token`.
-   - **Save this token somewhere safe**, you will need it later on.
-
-2. Create the Cloudflare Tunnel:
-
-    ```sh
-    cloudflared tunnel login
-    cloudflared tunnel create --credentials-file cloudflare-tunnel.json kubernetes
-    ```
+    - Ensure the OAuth client has the tags required by the operator (for example `tag:k8s-operator`).
+    - Keep the generated credentials available while completing Stage 5.
 
 ### Stage 5: Cluster configuration
 
@@ -127,6 +116,8 @@ These guidelines provide a strong baseline, but there are always exceptions and 
     ```
 
 2. Fill out the `cluster.toml` configuration file using the comments in it as a guide.
+
+    - At minimum, populate your network, node, repository, and `[tailscale]` OAuth settings.
 
 3. Template out the kubernetes and talos configuration files, if any issues come up be sure to read the error and adjust your config files accordingly.
 
@@ -199,68 +190,73 @@ These guidelines provide a strong baseline, but there are always exceptions and 
     flux get hr -A
     ```
 
-3. Check TCP connectivity to both the internal and external gateways:
+3. Check TCP connectivity to Tailscale ingress endpoints:
 
    📍 _The variables are only placeholders, replace them with your actual values_
 
     ```sh
-    nmap -Pn -n -p 443 ${gateways_internal} ${gateways_external} -vv
+    nmap -Pn -n -p 443 echo.${tailnet}.ts.net -vv
     ```
 
-4. Check you can resolve DNS for `echo`, this should resolve to `${gateways_external}`:
+4. Check you can reach `echo` over Tailscale:
 
    📍 _The variables are only placeholders, replace them with your actual values_
 
     ```sh
-    dig @${gateways_dns} echo.${cloudflare_domain}
+    curl -I https://echo.${tailnet}.ts.net
     ```
 
-5. Check the status of your wildcard `Certificate`:
+5. Check Tailscale ingress status:
 
     ```sh
-    kubectl -n network describe certificates
+    kubectl get ingress -A
     ```
 
-### 🌐 Public DNS
+### 🌐 Tailscale Access
 
 > [!TIP]
-> Use the `envoy-external` gateway on `HTTPRoutes` to make applications public to the internet. These are also accessible on your private network once you set up split DNS.
+> Services exposed with `ingressClassName: tailscale` are reachable at `https://<hostname>.<tailnet>.ts.net`.
 
-The `external-dns` application created in the `network` namespace will handle creating public DNS records. By default, `echo` and the `flux-webhook` are the only subdomains reachable from the public internet. In order to make additional applications public you must **set the correct gateway** like in the HelmRelease for `echo`.
+By default, `echo` is exposed over Tailscale at `echo.<tailnet>.ts.net`.
 
-### 🏠 Home DNS
+### ➕ Exposing New Apps
 
-> [!TIP]
-> Use the `envoy-internal` gateway on `HTTPRoutes` to make applications private to your network. If you're having trouble with internal DNS resolution check out [this](https://github.com/onedr0p/cluster-template/discussions/719) GitHub discussion.
+To expose any new app at `https://<service>.<tailnet>.ts.net`, add a standard Kubernetes `Ingress` with `ingressClassName: tailscale` and a `tailscale.com/hostname` annotation.
 
-`k8s_gateway` will provide DNS resolution to external Kubernetes resources (i.e. points of entry to the cluster) from any device that uses your home DNS server. For this to work, your home DNS server must be configured to forward DNS queries for `${cloudflare_domain}` to `${gateways_dns}` instead of the upstream DNS server(s) it normally uses. This is a form of **split DNS** (aka split-horizon DNS / conditional forwarding).
+Example:
 
-_... Nothing working? That is expected, this is DNS after all!_
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+    name: my-app
+    annotations:
+        tailscale.com/hostname: my-app
+spec:
+    ingressClassName: tailscale
+    defaultBackend:
+        service:
+            name: my-app
+            port:
+                number: 80
+```
 
-### 🪝 GitHub Webhook
+This publishes `https://my-app.<tailnet>.ts.net` on default HTTPS without router port forwarding.
 
-By default Flux will periodically check your git repository for changes. In-order to have Flux reconcile on `git push` you must configure GitHub to send `push` events to Flux.
+### 🪝 Git Reconciliation
 
-1. Obtain the webhook path:
+Flux reconciles on its polling interval by default. This repository does not expose a public webhook endpoint.
 
-   📍 _Hook id and path should look like `/hook/12ebd1e363c641dc3c2e430ecf3cee2b3c7a5ac9e1234506f6f5f3ce1230e123`_
+If you want faster convergence after a push, you can run:
 
-    ```sh
-    kubectl -n flux-system get receiver github-webhook --output=jsonpath='{.status.webhookPath}'
-    ```
-
-2. Piece together the full URL with the webhook path appended:
-
-    ```text
-    https://flux-webhook.${cloudflare_domain}/hook/12ebd1e363c641dc3c2e430ecf3cee2b3c7a5ac9e1234506f6f5f3ce1230e123
-    ```
-
-3. Navigate to the settings of your repository on GitHub, under "Settings/Webhooks" press the "Add webhook" button. Fill in the webhook URL and your token from `github-push-token.txt`, Content type: `application/json`, Events: Choose Just the push event, and save.
+```sh
+just kube reconcile
+```
 
 ## 💥 Reset
 
 > [!CAUTION]
-> **Resetting** the cluster **multiple times in a short period of time** could lead to being **rate limited by DockerHub or Let's Encrypt**.
+> **Resetting** the cluster **multiple times in a short period of time** could lead to being **rate limited by container registries**.
 
 There might be a situation where you want to destroy your Kubernetes cluster. The following command will reset your nodes back to maintenance mode.
 
@@ -383,7 +379,7 @@ Resolving problems that you have could take some tweaking of your YAML manifests
 
 ## 🧹 Tidy up
 
-Once your cluster is fully configured and you no longer need to run `just configure`, it's a good idea to clean up the repository by removing the [template](./template) directory and any files related to the templating process. This will help eliminate unnecessary clutter from the upstream template repository and resolve any "duplicate registry" warnings from Renovate.
+Once your cluster is fully configured and you no longer need to run `just configure`, it's a good idea to clean up the repository by removing the [template](./template) directory and any files related to the templating process. This helps reduce clutter and resolves any "duplicate registry" warnings from Renovate.
 
 1. Tidy up your repository:
 
@@ -407,7 +403,7 @@ Below are some optional considerations you may want to explore.
 
 ### DNS
 
-The template uses [k8s_gateway](https://github.com/k8s-gateway/k8s_gateway) to provide DNS for your applications, consider exploring [external-dns](https://github.com/kubernetes-sigs/external-dns) as an alternative.
+For non-Tailscale exposure patterns, you can add a separate ingress controller and DNS automation later. This is optional for the default tailscale-first workflow in this repository.
 
 External-DNS offers broad support for various DNS providers, including but not limited to:
 
@@ -444,8 +440,8 @@ Community member [@whazor](https://github.com/whazor) created [Kubesearch](https
 
 ### Community
 
-- Make a post in this repository's GitHub [Discussions](https://github.com/onedr0p/cluster-template/discussions).
-- Start a thread in the `#support` or `#cluster-template` channels in the [Home Operations](https://discord.gg/home-operations) Discord server.
+- Make a post in this repository's GitHub [Discussions](https://github.com/jckimble/homeops/discussions).
+- Start a thread in the `#support` channel in the [Home Operations](https://discord.gg/home-operations) Discord server.
 
 ## 📺 Media
 
@@ -472,11 +468,11 @@ If this repo is too hot to handle or too cold to hold check out these following 
 
 <div align="center">
 
-<a href="https://star-history.com/#onedr0p/cluster-template&Date">
+<a href="https://star-history.com/#jckimble/homeops&Date">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=onedr0p/cluster-template&type=Date&theme=dark" />
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=onedr0p/cluster-template&type=Date" />
-    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=onedr0p/cluster-template&type=Date" />
+        <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=jckimble/homeops&type=Date&theme=dark" />
+        <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=jckimble/homeops&type=Date" />
+        <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=jckimble/homeops&type=Date" />
   </picture>
 </a>
 

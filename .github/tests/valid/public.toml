@@ -13,19 +13,14 @@ svc_cidr = "10.43.0.0/16"
 addr     = "10.10.10.254"
 tls_sans = ["example.com"]
 
-[gateways]
-internal = "10.10.10.252"
-dns      = "10.10.10.253"
-external = "10.10.10.251"
-
 [repository]
 name       = "onedr0p/cluster-template"
 branch     = "main"
 visibility = "public"
 
-[cloudflare]
-domain = "example.com"
-token  = "fake"
+[tailscale]
+oauth_client_id     = "fake-client-id"
+oauth_client_secret = "fake-client-secret"
 
 [cilium]
 loadbalancer_mode = "dsr"

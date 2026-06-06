@@ -28,7 +28,6 @@ jobs:
       matrix:
         fixture:
           - overlapping-cidrs
-          - duplicate-gateway-addrs
           - duplicate-node-names
           - reserved-node-name
           - bad-mac-address
@@ -85,7 +84,6 @@ jobs:
       - name: Prepare files
         run: |
           cp ./.github/tests/valid/${{ matrix.fixture }}.toml cluster.toml
-          echo '{"AccountTag":"fake","TunnelSecret":"fake","TunnelID":"fake"}' > cloudflare-tunnel.json
           touch kubeconfig
 
       - name: Run configure recipe

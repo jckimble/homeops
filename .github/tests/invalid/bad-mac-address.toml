@@ -6,17 +6,8 @@ node_cidr = "10.10.10.0/24"
 [kubernetes.api]
 addr = "10.10.10.254"
 
-[gateways]
-internal = "10.10.10.252"
-dns      = "10.10.10.253"
-external = "10.10.10.251"
-
 [repository]
 name = "onedr0p/cluster-template"
-
-[cloudflare]
-domain = "example.com"
-token  = "fake"
 
 [[nodes]]
 name         = "k8s-0"

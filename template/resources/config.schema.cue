@@ -8,9 +8,8 @@ import (
 #Config: {
 	network:    #Network
 	kubernetes: #Kubernetes
-	gateways:   #Gateways
 	repository: #Repository
-	cloudflare: #Cloudflare
+	tailscale:  #Tailscale
 	cilium:     #Cilium
 	nodes: [...#Node]
 
@@ -24,10 +23,6 @@ import (
 	network: node_cidr: !=kubernetes.pod_cidr & !=kubernetes.svc_cidr
 	kubernetes: pod_cidr: !=network.node_cidr & !=kubernetes.svc_cidr
 	kubernetes: svc_cidr: !=network.node_cidr & !=kubernetes.pod_cidr
-
-	_addrs_check: list.UniqueItems() & [
-		kubernetes.api.addr, gateways.internal, gateways.dns, gateways.external,
-	]
 
 	_node_name_check: list.UniqueItems() & [for n in nodes {n.name}]
 	_node_addr_check: list.UniqueItems() & [for n in nodes {n.address}]
@@ -64,15 +59,6 @@ import (
 	}
 }
 
-#Gateways: {
-	// Internal gateway load balancer IP.
-	internal: net.IPv4
-	// k8s_gateway DNS load balancer IP.
-	dns: net.IPv4
-	// External (cloudflared) gateway load balancer IP.
-	external: net.IPv4
-}
-
 #Repository: {
 	// GitHub repository, e.g. "onedr0p/cluster-template".
 	name: string
@@ -82,11 +68,11 @@ import (
 	visibility: *"public" | "private"
 }
 
-#Cloudflare: {
-	// Domain you wish to use from your Cloudflare account.
-	domain: net.FQDN
-	// API token with Zone:DNS:Edit and Account:Cloudflare Tunnel:Read permissions.
-	token: string
+#Tailscale: {
+	// OAuth client ID for the Tailscale Kubernetes operator.
+	oauth_client_id: string & !=""
+	// OAuth client secret for the Tailscale Kubernetes operator.
+	oauth_client_secret: string & !=""
 }
 
 #Cilium: {

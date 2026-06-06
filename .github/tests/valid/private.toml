@@ -4,18 +4,13 @@ node_cidr = "10.10.10.0/24"
 [kubernetes.api]
 addr = "10.10.10.254"
 
-[gateways]
-internal = "10.10.10.252"
-dns      = "10.10.10.253"
-external = "10.10.10.251"
-
 [repository]
 name       = "onedr0p/cluster-template"
 visibility = "private"
 
-[cloudflare]
-domain = "example.com"
-token  = "fake"
+[tailscale]
+oauth_client_id     = "fake-client-id"
+oauth_client_secret = "fake-client-secret"
 
 [[nodes]]
 name         = "k8s-0"
