@@ -1,0 +1,19 @@
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: home-assistant
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: local-storage
+  volumeMode: Filesystem
+  claimRef:
+    namespace: home
+    name: home-assistant
+  hostPath:
+    path: /var/lib/home-assistant
+    type: DirectoryOrCreate

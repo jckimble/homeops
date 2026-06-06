@@ -7,5 +7,7 @@ components:
   - ../../components/sops
 
 resources:
+  - ./storageclass.yaml
+  - ./pv.yaml
   - ./namespace.yaml
   - ./home-assistant/ks.yaml
