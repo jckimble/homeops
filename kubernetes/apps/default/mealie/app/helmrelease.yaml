@@ -2,32 +2,31 @@
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: home-assistant
+  name: mealie
 spec:
   chartRef:
     kind: OCIRepository
-    name: home-assistant
+    name: mealie
   interval: 1h
   values:
     controllers:
-      home-assistant:
+      mealie:
         strategy: Recreate
         containers:
           app:
             image:
-              repository: ghcr.io/home-operations/home-assistant
-              tag: 2026.6.0
+              repository: ghcr.io/mealie-recipes/mealie
+              tag: v3.19.2
             env:
               TZ: America/Chicago
-              HASS_HTTP_USE_X_FORWARDED_FOR: "true"
-              HASS_HTTP_TRUSTED_PROXY_1: 10.42.0.0/16
+              BASE_URL: https://meal.tailnet.ts.net
             probes:
               liveness: &probes
                 enabled: true
                 custom: true
                 spec:
                   tcpSocket:
-                    port: 8123
+                    port: 9000
                   initialDelaySeconds: 30
                   periodSeconds: 10
                   timeoutSeconds: 1
@@ -35,19 +34,18 @@ spec:
               readiness: *probes
             resources:
               requests:
-                cpu: 200m
-                memory: 1Gi
+                cpu: 100m
+                memory: 256Mi
               limits:
-                memory: 2Gi
+                memory: 1Gi
     service:
       app:
-        controller: home-assistant
+        controller: mealie
         ports:
           http:
-            port: 8123
+            port: 9000
     persistence:
-      config:
-        type: persistentVolumeClaim
-        existingClaim: home-assistant
+      data:
+        type: emptyDir
         globalMounts:
-          - path: /config
+          - path: /app/data

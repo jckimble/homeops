@@ -11,3 +11,4 @@ resources:
   - ./pv.yaml
   - ./namespace.yaml
   - ./home-assistant/ks.yaml
+  - ./eufy-security/ks.yaml

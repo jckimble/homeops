@@ -1,0 +1,17 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: mealie
+  annotations:
+    tailscale.com/hostname: meal.tailnet.ts.net
+spec:
+  ingressClassName: tailscale
+  tls:
+    - hosts:
+        - meal.tailnet.ts.net
+  defaultBackend:
+    service:
+      name: mealie
+      port:
+        number: 9000
